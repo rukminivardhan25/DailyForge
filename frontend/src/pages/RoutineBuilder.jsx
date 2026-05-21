@@ -10,12 +10,11 @@ import {
 import TaskLibrary from "../components/Routine/TaskLibrary";
 import WeeklyGrid from "../components/Routine/WeeklyGrid";
 import TaskFormModal from "../components/Task/TaskFormModal";
-import RoutineCard from "../components/Routine/RoutineCard.jsx";
+import SavedRoutinesCard from "../components/Routine/SavedRoutinesCard.jsx";
 import useTasks from "../hooks/useTasks.js";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import api from "../api/axios.js";
-import EmptyState from "../components/EmptyState";
 import { useScrollThenOpen } from "../hooks/useScrollThenOpen.js";
 
 export default function RoutineBuilder() {
@@ -28,7 +27,6 @@ export default function RoutineBuilder() {
   const [routineName, setRoutineName] = useState("");
   const [savedRoutines, setSavedRoutines] = useState([]);
   const [loadingRoutines, setLoadingRoutines] = useState(false);
-  const [activeRoutine, setActiveRoutine] = useState([]);
   const [description, setDescription] = useState("");
   const [activeTask, setActiveTask] = useState(null);
 
@@ -45,6 +43,7 @@ export default function RoutineBuilder() {
   const closeModal = useCallback(() => setIsModalOpen(false), []);
 
   const handleOpenModal = useScrollThenOpen(openModal, 0);
+  const handleAddRoutine = useScrollThenOpen(() => {}, 0);
 
   const handleSubmit = async (data) => {
     try {
@@ -59,25 +58,6 @@ export default function RoutineBuilder() {
   useEffect(() => {
     fetchRoutines();
   }, []);
-
-  useEffect(() => {
-
-  if (!savedRoutines.length) return;
-
-  const storedRoutineIds = JSON.parse(
-    localStorage.getItem("activeRoutineIds") || "[]"
-  );
-
-  if (!storedRoutineIds.length) return;
-
-  const restoredRoutines = savedRoutines.filter(
-    (routine) =>
-      storedRoutineIds.includes(routine._id)
-  );
-
-  setActiveRoutine(restoredRoutines);
-
-  }, [savedRoutines]);
 
   const fetchRoutines = async () => {
     try {
@@ -192,63 +172,27 @@ export default function RoutineBuilder() {
           </div>
         </header>
 
-        {/* Main Layout */}
-        <div className="grid grid-cols-12 gap-6 animate-in delay-200">
-          <aside className="col-span-12 md:col-span-3">
-            <TaskLibrary
-  tasks={tasks}
-  onAddTask={() => setIsModalOpen(true)}
-/>
-            {/*
-             * TaskLibrary's "Add Task" button opens the modal directly
-             * (user is already at the top section of the page, no scroll needed).
-             * Use openModal instead of handleOpenModal here.
-             */}
-            <TaskLibrary onAddTask={openModal} />
-          </aside>
-
-          <section className="col-span-12 md:col-span-9">
-            <WeeklyGrid
-              scheduledTasks={scheduledTasks}
-              onSaveDay={openSaveRoutineModal}
-              onDeleteTask={removeScheduledTask}
-            />
-          </section>
-        </div>
-
-         {/* ================= Saved Routines ================= */}
-        <section className="mt-10 animate-in delay-300">
-          <h2 className="text-xl font-semibold text-main mb-4">
-            Saved Routines
-          </h2>
-
-          {loadingRoutines ? (
-            <p className="text-sm text-muted">Loading routines…</p>
-          ) : savedRoutines.length === 0 ? (
-            /*
-             * EmptyState is deep in the page — clicking "Create Your First
-             * Routine" here triggers handleOpenModal, which scrolls to the
-             * top first, then opens the modal once the scroll settles.
-             */
-            <EmptyState
-              type="routines"
-              onAction={handleOpenModal}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {savedRoutines.map((routine) => (
-                <RoutineCard
-                  key={routine._id}
-                  routine={routine}
-                  tasks={tasks}
-                  activeRoutine={activeRoutine}
-                  setActiveRoutine={setActiveRoutine}
-                  fetchRoutines={fetchRoutines}
-                />
-              ))}
-            </div>
-          )}
+        <section className="animate-in delay-200">
+          <WeeklyGrid
+            scheduledTasks={scheduledTasks}
+            onSaveDay={openSaveRoutineModal}
+            onDeleteTask={removeScheduledTask}
+          />
         </section>
+
+        <div className="grid gap-8 mt-8 animate-in delay-300 lg:grid-cols-[1fr_1.25fr]">
+          <div className="h-full">
+            <SavedRoutinesCard
+              routines={savedRoutines}
+              loading={loadingRoutines}
+              onAddRoutine={handleAddRoutine}
+            />
+          </div>
+
+          <div className="h-full">
+            <TaskLibrary tasks={tasks} onAddTask={handleOpenModal} />
+          </div>
+        </div>
 
         {/* Task Form Modal */}
         {isModalOpen && (
